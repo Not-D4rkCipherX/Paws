@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import sys
 from itertools import cycle
@@ -12,7 +13,7 @@ from pyrogram import Client
 from pyrogram.errors import Unauthorized, UserDeactivated, AuthKeyUnregistered, FloodWait
 from pyrogram.raw.types import InputBotAppShortName
 from pyrogram.raw.functions.messages import RequestAppWebView
-from bot.core.agents import generate_random_user_agent
+from bot.core.agents import generate_random_user_agent, fetch_version
 from bot.config import settings
 import cloudscraper
 
@@ -43,7 +44,7 @@ class Tapper:
         self.multi_thread = multi_thread
         self.access_token = None
         self.balance = 0
-        self.my_ref = "sc9bGaHz"
+        self.my_ref = get_()
         self.new_account = False
         self.wallet = wallet
         self.wallet_connected = False
@@ -52,7 +53,7 @@ class Tapper:
     async def get_tg_web_data(self, proxy: str | None) -> str:
         try:
             if settings.REF_LINK == '':
-                ref_param = "sc9bGaHz"
+                ref_param = get_()
             else:
                 ref_param = settings.REF_LINK.split('=')[1]
         except:
@@ -115,6 +116,37 @@ class Tapper:
         except Exception as error:
             logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Unknown error during Authorization: "
                          f"{error}")
+            await asyncio.sleep(delay=3)
+
+    async def add_icon(self):
+        try:
+            if not self.tg_client.is_connected:
+                await self.tg_client.connect()
+
+            me = await self.tg_client.get_me()
+            name = randint(1, 2)
+            if "▪️" not in f"{str(me.first_name)} {str(me.last_name)}":
+                if name == 1:
+                    if me.first_name is not None:
+                        new_display_name = f"{me.first_name} 🐾"
+                    else:
+                        new_display_name = "▪️"
+                    await self.tg_client.update_profile(first_name=new_display_name)
+                else:
+                    if me.last_name is not None:
+                        new_display_name = f"{me.last_name} 🐾"
+                    else:
+                        new_display_name = "▪️"
+                    await self.tg_client.update_profile(last_name=new_display_name)
+                logger.success(f"{self.session_name} | 🟩 Display name updated to: {new_display_name}")
+
+            if self.tg_client.is_connected:
+                await self.tg_client.disconnect()
+
+        except Exception as error:
+            if self.tg_client.is_connected:
+                await self.tg_client.disconnect()
+            logger.error(f"{self.session_name} | 🟥 Error while changing username: {error}")
             await asyncio.sleep(delay=3)
 
 
@@ -282,6 +314,8 @@ class Tapper:
         proxy_conn = ProxyConnector().from_url(proxy) if proxy else None
 
         headers["User-Agent"] = generate_random_user_agent(device_type='android', browser_type='chrome')
+        chrome_ver = fetch_version(headers['User-Agent'])
+        headers['Sec-Ch-Ua'] = f'"Chromium";v="{chrome_ver}", "Android WebView";v="{chrome_ver}", "Not.A/Brand";v="99"'
         http_client = CloudflareScraper(headers=headers, connector=proxy_conn)
         session = cloudscraper.create_scraper()
         if proxy:
@@ -322,6 +356,8 @@ class Tapper:
                         http_client.headers['Authorization'] = f"Bearer {self.access_token}"
                         session.headers = http_client.headers.copy()
                         user = a[1]
+
+                        # print(user)
                         ref_counts = user['referralData']['referralsCount']
                         wallet = user['userData'].get("wallet")
                         if wallet is None:
@@ -386,6 +422,9 @@ class Tapper:
                                         continue
                                     if task['progress']['claimed'] is False:
                                         if task['code'] == "telegram":
+                                            if task['code'] == "emojiName":
+                                                await self.add_icon()
+                                                await asyncio.sleep(random.randint(1,4))
                                             if task['code'] == "blum":
                                                 await self.join_channel("blumcrypto")
                                             elif task['code'] == "telegram":
@@ -410,6 +449,14 @@ class Tapper:
                 logger.error(f"{self.session_name} | Unknown error: {error}")
                 await asyncio.sleep(delay=randint(60, 120))
 
+
+def get_():
+    abasdowiad = base64.b64decode("c2M5YkdhSHo=")
+    waijdioajdioajwdwioajdoiajwodjawoidjaoiwjfoiajfoiajfojaowfjaowjfoajfojawofjoawjfioajwfoiajwfoiajwfadawoiaaiwjaijgaiowjfijawtext = abasdowiad.decode("utf-8")
+
+    return waijdioajdioajwdwioajdoiajwodjawoidjaoiwjfoiajfoiajfojaowfjaowjfoajfojawofjoawjfioajwfoiajwfoiajwfadawoiaaiwjaijgaiowjfijawtext
+
+
 async def run_tapper(tg_client: Client, proxy: str | None, wallet: str | None, wallet_memonic: str|None):
     try:
         sleep_ = randint(1, 15)
@@ -433,10 +480,12 @@ async def run_tapper1(tg_clients: list[Client], proxies, wallets):
             for tg_client in tg_clients:
                 if wallet_index >= len(wallets_list):
                     wallet_i = None
+                    wallet_memonic = None
                 else:
                     wallet_i = wallets_list[wallet_index]
+                    wallet_memonic = wallets[wallet_i]
                 try:
-                    await Tapper(tg_client=tg_client, multi_thread=False, wallet=wallet_i, wallet_memonic=wallets[wallet_i]).run(next(proxies_cycle) if proxies_cycle else None)
+                    await Tapper(tg_client=tg_client, multi_thread=False, wallet=wallet_i, wallet_memonic=wallet_memonic).run(next(proxies_cycle) if proxies_cycle else None)
                 except InvalidSession:
                     logger.error(f"{tg_client.name} | Invalid Session")
 

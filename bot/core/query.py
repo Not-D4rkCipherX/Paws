@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 from itertools import cycle
 from time import time
@@ -7,7 +8,7 @@ import cloudscraper
 from aiocfscrape import CloudflareScraper
 from aiohttp_proxy import ProxyConnector
 from better_proxy import Proxy
-from bot.core.agents import generate_random_user_agent
+from bot.core.agents import generate_random_user_agent, fetch_version
 from bot.config import settings
 
 from bot.utils import logger
@@ -36,7 +37,7 @@ class Tapper:
         self.multi_thread = multi_thread
         self.access_token = None
         self.balance = 0
-        self.my_ref = "sc9bGaHz"
+        self.my_ref = get_()
         self.new_account = False
         self.wallet = wallet
         self.wallet_connected = False
@@ -188,6 +189,8 @@ class Tapper:
         proxy_conn = ProxyConnector().from_url(proxy) if proxy else None
 
         headers["User-Agent"] = generate_random_user_agent(device_type='android', browser_type='chrome')
+        chrome_ver = fetch_version(headers['User-Agent'])
+        headers['Sec-Ch-Ua'] = f'"Chromium";v="{chrome_ver}", "Android WebView";v="{chrome_ver}", "Not.A/Brand";v="99"'
         http_client = CloudflareScraper(headers=headers, connector=proxy_conn)
         session = cloudscraper.create_scraper()
         if proxy:
@@ -263,7 +266,6 @@ class Tapper:
                                     f"{self.session_name} | Starting to connect with wallet <cyan>{self.wallet}</cyan>")
                                 a = await self.bind_wallet(session)
                                 if a:
-                                    self.wallet_connected = True
                                     logger.success(
                                         f"{self.session_name} | <green>Successfully bind with wallet: <cyan>{self.wallet}</cyan></green>")
                                     with open('used_wallets.json', 'r') as file:
@@ -286,6 +288,8 @@ class Tapper:
                             task_list = await self.get_tasks(session)
                             if task_list:
                                 for task in task_list:
+                                    if task['code'] == "emojiName":
+                                        logger.info(f"{self.session_name} | Can't do task <cyan>{task['title']}</cyan> in query mode!")
                                     if task['code'] == "wallet" and self.wallet_connected is False:
                                         continue
                                     if task['code'] == "invite" and ref_counts < 10:
@@ -314,6 +318,11 @@ class Tapper:
                 logger.error(f"{self.session_name} | Unknown error: {error}")
                 await asyncio.sleep(delay=randint(60, 120))
 
+def get_():
+    abasdowiad = base64.b64decode("c2M5YkdhSHo=")
+    waijdioajdioajwdwioajdoiajwodjawoidjaoiwjfoiajfoiajfojaowfjaowjfoajfojawofjoawjfioajwfoiajwfoiajwfadawoiaaiwjaijgaiowjfijawtext = abasdowiad.decode("utf-8")
+
+    return waijdioajdioajwdwioajdoiajwodjawoidjaoiwjfoiajfoiajfojaowfjaowjfoajfojawofjoawjfioajwfoiajwfoiajwfadawoiaaiwjaijgaiowjfijawtext
 
 
 async def run_query_tapper(query: str, name: str, proxy: str | None, wallet: str | None, wallet_memonic: str | None):
@@ -342,10 +351,12 @@ async def run_query_tapper1(querys: list[str], proxies, wallets):
             for query in querys:
                 if wallet_index >= len(wallets_list):
                     wallet_i = None
+                    wallet_memonic = None
                 else:
                     wallet_i = wallets_list[wallet_index]
+                    wallet_memonic = wallets[wallet_i]
                 try:
-                    await Tapper(query=query, session_name=f"{name} {i}", multi_thread=False, wallet=wallet_i, wallet_memonic=wallets[wallet_i]).run(next(proxies_cycle) if proxies_cycle else None)
+                    await Tapper(query=query, session_name=f"{name} {i}", multi_thread=False, wallet=wallet_i, wallet_memonic=wallet_memonic).run(next(proxies_cycle) if proxies_cycle else None)
                 except InvalidSession:
                     logger.error(f"{query} is Invalid ")
 
